@@ -1,0 +1,31 @@
+﻿// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel CSMain
+
+// Create a RenderTexture with enableRandomWrite flag and set it
+// with cs.SetTexture
+RWStructuredBuffer<float4x4> matrixBuffer;
+RWStructuredBuffer<float> timeSliceBuffer;
+float _DeltaFlashSpeed;
+
+inline float2 LocalRand(float2 seed)
+{
+	float dt = dot(seed, float2(78.233, 45.5432));// project seed on random constant vector   
+	seed *= dt;
+	return frac(sin(seed) * 5478.5453) * 2 - 1;// return only fractional part
+}
+
+[numthreads(1023,1,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+	timeSliceBuffer[id.x] += _DeltaFlashSpeed;
+	if (timeSliceBuffer[id.x] > 1){
+		timeSliceBuffer[id.x] = 0;
+		float4x4 mtx = matrixBuffer[id.x];
+		float2 seed = float2(mtx._m03, mtx._m13);
+		seed = LocalRand(seed);
+		mtx._m03 = seed.x;
+		mtx._m13 = seed.y;
+		matrixBuffer[id.x] = mtx;
+	}
+}
+
